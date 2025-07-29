@@ -16,3 +16,14 @@ data class Grade(
     val stability: Double = 0.0,
     val difficulty: Double = 0.0
 )
+
+data class FlashCard(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    
+    var stability: Double = 2.5,
+    var difficulty: Double = 2.5,
+    var interval: Int = 0,
+    var dueDate: LocalDateTime = LocalDateTime.now(),
+    var reviewCount: Int = 0,
+    var lastReview : LocalDateTime = LocalDateTime.now()
+)
