@@ -7,6 +7,13 @@ enum class Rating(val value: Int) {
     Easy(4)
 }
 
+enum class CardPhase(val value: Int) {
+    Added(0), //just added
+    Know(1), //after first rate good
+    Learning(2), //second rate good or rate again when reviewed
+    Review(3), //third rate good
+}
+
 data class Grade(
     @ColorRes val color: Int,
     val title: String,
@@ -27,5 +34,5 @@ data class FlashCard(
     var dueDate: LocalDateTime = LocalDateTime.now(),
     var reviewCount: Int = 0,
     var lastReview : LocalDateTime = LocalDateTime.now(),
-    var lastRating: Int = 1,
+    var phase: Int = 0,
 )
