@@ -26,5 +26,6 @@ data class FlashCard(
     var interval: Int = 0,
     var dueDate: LocalDateTime = LocalDateTime.now(),
     var reviewCount: Int = 0,
-    var lastReview : LocalDateTime = LocalDateTime.now()
+    var lastReview : LocalDateTime = LocalDateTime.now(),
+    var lastRating: Int = 1,
 )
