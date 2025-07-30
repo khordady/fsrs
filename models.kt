@@ -10,7 +10,7 @@ enum class Rating(val value: Int) {
 data class Grade(
     @ColorRes val color: Int,
     val title: String,
-    val duration: Long = 0,
+    val durationMillis: Long = 0,
     val interval: Int = 0,
     val txt: String = "0",
     val choice: Rating,
