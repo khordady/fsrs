@@ -1,5 +1,3 @@
-package app.arteh.flashcard
-
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
@@ -23,15 +21,17 @@ class FSRS(
     private val isReview: Boolean = false,
 ) {
 
+    data class InitState(var difficulty: Double = 0.0, var stability: Double = 0.0)
+
     private val decay = -params[20]
     private val factor = 0.9.pow(1.0 / decay) - 1
     private val enableFuzz = true;
 
     var gradeList = mutableListOf<Grade>(
-        Grade(R.color.grad_blue, "Easy", 0, "0", Rating.Easy),
-        Grade(R.color.grad_green, "Good", 0, "0", Rating.Good),
-        Grade(R.color.grad_purple, "Hard", 0, "0", Rating.Hard),
-        Grade(R.color.grad_red, "Again", 0, "0", Rating.Again),
+        Grade(R.color.grad_blue, "Easy", 0, 0, "", Rating.Easy),
+        Grade(R.color.grad_green, "Good", 0, 0, "", Rating.Good),
+        Grade(R.color.grad_purple, "Hard", 0, 0, "", Rating.Hard),
+        Grade(R.color.grad_red, "Again", 0, 0, "", Rating.Again),
     )
 
     fun calculate(flashCard: FlashCard): List<Grade> {
@@ -43,9 +43,13 @@ class FSRS(
         var stateEasy: InitState
 
 
-        var intervalHard = 10 * 60 * 1000L //10min
-        var intervalGood: Long
-        var intervalEasy: Long
+        var durationHard = 10 * 60 * 1000L //10min
+        var durationGood: Long
+        var durationEasy: Long
+
+        var ivlHard = 0
+        var ivlGood = 0
+        var ivlEasy = 0
 
         var txtHard: String
         var txtGood: String
@@ -59,49 +63,49 @@ class FSRS(
             stateGood = initState(Rating.Good)
             stateEasy = initState(Rating.Easy)
 
-            intervalGood = nextInterval(stateGood.stability).toLong()
-            intervalEasy = nextInterval(stateEasy.stability).toLong()
-            intervalEasy = max(intervalEasy, intervalGood + 1)
+            ivlGood = nextInterval(stateGood.stability)
+            ivlEasy = nextInterval(stateEasy.stability)
+            ivlEasy = max(ivlEasy, ivlGood + 1)
 
             txtHard = "10 Min"
-            txtGood = "$intervalGood Day"
-            txtEasy = "$intervalEasy Day"
+            txtGood = "$ivlGood days"
+            txtEasy = "$ivlEasy days"
 
-            intervalGood = intervalGood * dayConvertor
-            intervalEasy = intervalEasy * dayConvertor
+            durationGood = ivlGood * dayConvertor
+            durationEasy = ivlEasy * dayConvertor
 
 
         } else if (flashCard.interval == 0) {
             val lastD = flashCard.difficulty
             val lastS = flashCard.stability
 
-            stateAgain = FSRS.InitState(
+            stateAgain = InitState(
                 difficulty = nextDifficulty(lastD, Rating.Again),
                 stability = nextShortTermStability(lastS, Rating.Again)
             )
-            stateHard = FSRS.InitState(
+            stateHard = InitState(
                 difficulty = nextDifficulty(lastD, Rating.Hard),
                 stability = nextShortTermStability(lastS, Rating.Hard)
             )
-            stateGood = FSRS.InitState(
+            stateGood = InitState(
                 difficulty = nextDifficulty(lastD, Rating.Good),
                 stability = nextShortTermStability(lastS, Rating.Good)
             )
-            stateEasy = FSRS.InitState(
+            stateEasy = InitState(
                 difficulty = nextDifficulty(lastD, Rating.Easy),
                 stability = nextShortTermStability(lastS, Rating.Easy)
             )
 
-            intervalGood = nextInterval(stateGood.stability).toLong()
-            intervalEasy = nextInterval(stateEasy.stability).toLong()
-            intervalEasy = max(intervalEasy, intervalGood + 1)
+            ivlGood = nextInterval(stateGood.stability)
+            ivlEasy = nextInterval(stateEasy.stability)
+            ivlEasy = max(ivlEasy, ivlGood + 1)
 
-            txtHard = "10 Min"
-            txtGood = "$intervalGood Day"
-            txtEasy = "$intervalEasy Day"
+            txtHard = "< 10 min"
+            txtGood = "$ivlGood days"
+            txtEasy = "$ivlEasy days"
 
-            intervalGood = intervalGood * dayConvertor
-            intervalEasy = intervalEasy * dayConvertor
+            durationGood = ivlGood * dayConvertor
+            durationEasy = ivlEasy * dayConvertor
 
         } else {
             val interval = flashCard.interval
@@ -127,43 +131,69 @@ class FSRS(
                 stability = nextRecallStability(lastD, lastS, retrievability, Rating.Easy)
             )
 
-            intervalHard = nextInterval(stateHard.stability).toLong()
-            intervalGood = nextInterval(stateGood.stability).toLong()
-            intervalEasy = nextInterval(stateEasy.stability).toLong()
+            ivlHard = nextInterval(stateHard.stability)
+            ivlGood = nextInterval(stateGood.stability)
+            ivlEasy = nextInterval(stateEasy.stability)
 
-            intervalHard = kotlin.math.min(intervalHard, intervalGood)
-            intervalGood = kotlin.math.min(intervalGood, intervalHard + 1)
-            intervalEasy = kotlin.math.min(intervalEasy, intervalGood + 1)
+            ivlHard = kotlin.math.min(ivlHard, ivlGood)
+            ivlGood = kotlin.math.min(ivlGood, ivlHard + 1)
+            ivlEasy = kotlin.math.min(ivlEasy, ivlGood + 1)
 
-            txtHard = "10 Min"
-            txtGood = "$intervalGood Day"
-            txtEasy = "$intervalEasy Day"
+            txtHard = "$ivlHard days"
+            txtGood = "$ivlGood days"
+            txtEasy = "$ivlEasy days"
 
-            intervalGood = intervalGood * dayConvertor
-            intervalEasy = intervalEasy * dayConvertor
+            durationHard = ivlHard * dayConvertor
+            durationGood = ivlGood * dayConvertor
+            durationEasy = ivlEasy * dayConvertor
         }
 
         gradeList[0] = gradeList[0].copy(
             stability = stateEasy.stability, difficulty = stateEasy.difficulty,
-            interval = intervalEasy, txt = txtEasy
+            durationMillis = durationEasy, interval = ivlEasy, txt = txtEasy
         )
         gradeList[1] = gradeList[1].copy(
             stability = stateGood.stability, difficulty = stateGood.difficulty,
-            interval = intervalGood, txt = txtGood
+            durationMillis = durationGood, interval = ivlGood, txt = txtGood
         )
         gradeList[2] = gradeList[2].copy(
             stability = stateHard.stability, difficulty = stateHard.difficulty,
-            interval = intervalHard, txt = txtHard
+            durationMillis = durationHard, interval = ivlHard, txt = txtHard
         )
         gradeList[3] = gradeList[3].copy(
             stability = stateAgain.stability, difficulty = stateAgain.difficulty,
-            interval = 1 * 60 * 1000L, txt = "1 Min"
+            durationMillis = 3 * 60 * 1000L, txt = "< 3 Min"
         )
 
         return gradeList
     }
 
-    data class InitState(var difficulty: Double = 0.0, var stability: Double = 0.0)
+    private fun applyFuzz(
+        interval: Double,
+        fuzzFactor: Double,
+        scheduledDays: Int = 0
+    ): Double {
+        if (!enableFuzz || interval < 2.5) return interval
+
+        val ivl = interval.roundToInt()
+        var minIvl = max(2, (ivl * 0.95 - 1).roundToInt())
+        val maxIvl = (ivl * 1.05 + 1).roundToInt()
+
+        if (isReview && ivl > scheduledDays)
+            minIvl = max(minIvl, scheduledDays + 1)
+
+        return floor(fuzzFactor * (maxIvl - minIvl + 1) + minIvl)
+    }
+
+    private fun forgettingCurve(interval: Double, stability: Double): Double {
+        return exp(-interval / stability)
+    }
+
+    private fun generateFuzzFactor(): Double {
+        val seed = System.currentTimeMillis()
+        val random = Random(seed)
+        return random.nextDouble()  // returns value between 0.0 and 1.0
+    }
 
     private fun initDifficulty(rating: Rating): Double {
         val base = params[4]
@@ -185,6 +215,14 @@ class FSRS(
         )
     }
 
+    private fun linearDamping(delta: Double, oldD: Double): Double {
+        return delta * (10 - oldD / 9)
+    }
+
+    private fun meanReversion(initD: Double, nextD: Double): Double {
+        return params[7] * initD + (1 - params[7]) * nextD
+    }
+
     private fun nextInterval(
         stability: Double,
         maxInterval: Int = 36500, lastInterval: Int = 0
@@ -193,29 +231,6 @@ class FSRS(
         val rawInterval = stability / factor * (requestRetention.pow(1 / decay) - 1)
         val fuzzed = applyFuzz(rawInterval, fuzzFactor, scheduledDays = lastInterval)
         return fuzzed.roundToInt().coerceIn(1, maxInterval)
-    }
-
-    private fun applyFuzz(
-        interval: Double,
-        fuzzFactor: Double,
-        scheduledDays: Int = 0
-    ): Double {
-        if (!enableFuzz || interval < 2.5) return interval
-
-        val ivl = interval.roundToInt()
-        var minIvl = max(2, (ivl * 0.95 - 1).roundToInt())
-        val maxIvl = (ivl * 1.05 + 1).roundToInt()
-
-        if (isReview && ivl > scheduledDays)
-            minIvl = max(minIvl, scheduledDays + 1)
-
-        return floor(fuzzFactor * (maxIvl - minIvl + 1) + minIvl)
-    }
-
-    private fun generateFuzzFactor(): Double {
-        val seed = System.currentTimeMillis()
-        val random = Random(seed)
-        return random.nextDouble()  // returns value between 0.0 and 1.0
     }
 
     private fun nextDifficulty(currentD: Double, rating: Rating): Double {
@@ -232,18 +247,6 @@ class FSRS(
             sinc = max(sinc, 1.0)
         }
         return String.format("%.2f", abs(currentS * sinc)).toDouble()
-    }
-
-    private fun linearDamping(delta: Double, oldD: Double): Double {
-        return delta * (10 - oldD / 9)
-    }
-
-    private fun meanReversion(initD: Double, nextD: Double): Double {
-        return params[7] * initD + (1 - params[7]) * nextD
-    }
-
-    private fun forgettingCurve(interval: Double, stability: Double): Double {
-        return exp(-interval / stability)
     }
 
     private fun nextForgetStability(
