@@ -35,15 +35,13 @@ class FSRS(
     )
 
     fun calculate(flashCard: FlashCard): List<Grade> {
-        val isNewCard = flashCard.reviewCount == 0
-
         var stateAgain: InitState
         var stateHard: InitState
         var stateGood: InitState
         var stateEasy: InitState
 
 
-        var durationHard = 10 * 60 * 1000L //10min
+        var durationHard = 5 * 60 * 1000L //5min
         var durationGood: Long
         var durationEasy: Long
 
@@ -57,95 +55,114 @@ class FSRS(
 
         var dayConvertor: Long = 24 * 60 * 60 * 1000
 
-        if (isNewCard) {
-            stateAgain = initState(Rating.Again)
-            stateHard = initState(Rating.Hard)
-            stateGood = initState(Rating.Good)
-            stateEasy = initState(Rating.Easy)
+        when (flashCard.phase) {
+            CardPhase.Added.value -> {
+                stateAgain = InitState()
+                stateHard = InitState()
+                stateGood = InitState()
+                stateEasy = InitState()
 
-            ivlGood = nextInterval(stateGood.stability)
-            ivlEasy = nextInterval(stateEasy.stability)
-            ivlEasy = max(ivlEasy, ivlGood + 1)
+                ivlEasy = 1
 
-            txtHard = "10 Min"
-            txtGood = "$ivlGood days"
-            txtEasy = "$ivlEasy days"
+                txtHard = "5 Min"
+                txtGood = "10 Min"
+                txtEasy = "1 day"
 
-            durationGood = ivlGood * dayConvertor
-            durationEasy = ivlEasy * dayConvertor
+                durationGood = 10 * 60 * 1000L
+                durationEasy = ivlEasy * dayConvertor
+            }
 
+            CardPhase.Know.value -> {
+                stateAgain = initState(Rating.Again)
+                stateHard = initState(Rating.Hard)
+                stateGood = initState(Rating.Good)
+                stateEasy = initState(Rating.Easy)
 
-        } else if (flashCard.interval > 0 && flashCard.lastRating == Rating.Again.value) {
-            val lastD = flashCard.difficulty
-            val lastS = flashCard.stability
+                ivlGood = nextInterval(stateGood.stability)
+                ivlEasy = nextInterval(stateEasy.stability)
+                ivlEasy = max(ivlEasy, ivlGood + 1)
 
-            stateAgain = InitState(
-                difficulty = nextDifficulty(lastD, Rating.Again),
-                stability = nextShortTermStability(lastS, Rating.Again)
-            )
-            stateHard = InitState(
-                difficulty = nextDifficulty(lastD, Rating.Hard),
-                stability = nextShortTermStability(lastS, Rating.Hard)
-            )
-            stateGood = InitState(
-                difficulty = nextDifficulty(lastD, Rating.Good),
-                stability = nextShortTermStability(lastS, Rating.Good)
-            )
-            stateEasy = InitState(
-                difficulty = nextDifficulty(lastD, Rating.Easy),
-                stability = nextShortTermStability(lastS, Rating.Easy)
-            )
+                txtHard = "10 Min"
+                txtGood = "$ivlGood days"
+                txtEasy = "$ivlEasy days"
 
-            ivlGood = nextInterval(stateGood.stability)
-            ivlEasy = nextInterval(stateEasy.stability)
-            ivlEasy = max(ivlEasy, ivlGood + 1)
+                durationGood = ivlGood * dayConvertor
+                durationEasy = ivlEasy * dayConvertor
+            }
 
-            txtHard = "< 10 min"
-            txtGood = "$ivlGood days"
-            txtEasy = "$ivlEasy days"
+            CardPhase.Learning.value -> {
+                val lastD = flashCard.difficulty
+                val lastS = flashCard.stability
 
-            durationGood = ivlGood * dayConvertor
-            durationEasy = ivlEasy * dayConvertor
+                stateAgain = InitState(
+                    difficulty = nextDifficulty(lastD, Rating.Again),
+                    stability = nextShortTermStability(lastS, Rating.Again)
+                )
+                stateHard = InitState(
+                    difficulty = nextDifficulty(lastD, Rating.Hard),
+                    stability = nextShortTermStability(lastS, Rating.Hard)
+                )
+                stateGood = InitState(
+                    difficulty = nextDifficulty(lastD, Rating.Good),
+                    stability = nextShortTermStability(lastS, Rating.Good)
+                )
+                stateEasy = InitState(
+                    difficulty = nextDifficulty(lastD, Rating.Easy),
+                    stability = nextShortTermStability(lastS, Rating.Easy)
+                )
 
-        } else {
-            val interval = flashCard.interval
-            val lastD = flashCard.difficulty
-            val lastS = flashCard.stability
+                ivlGood = nextInterval(stateGood.stability)
+                ivlEasy = nextInterval(stateEasy.stability)
+                ivlEasy = max(ivlEasy, ivlGood + 1)
 
-            val retrievability = forgettingCurve(interval.toDouble(), lastS)
+                txtHard = "< 10 min"
+                txtGood = "$ivlGood days"
+                txtEasy = "$ivlEasy days"
 
-            stateAgain = InitState(
-                difficulty = nextDifficulty(lastD, Rating.Again),
-                stability = nextForgetStability(lastD, lastS, retrievability)
-            )
-            stateHard = InitState(
-                difficulty = nextDifficulty(lastD, Rating.Hard),
-                stability = nextRecallStability(lastD, lastS, retrievability, Rating.Hard)
-            )
-            stateGood = InitState(
-                difficulty = nextDifficulty(lastD, Rating.Good),
-                stability = nextRecallStability(lastD, lastS, retrievability, Rating.Good)
-            )
-            stateEasy = InitState(
-                difficulty = nextDifficulty(lastD, Rating.Easy),
-                stability = nextRecallStability(lastD, lastS, retrievability, Rating.Easy)
-            )
+                durationGood = ivlGood * dayConvertor
+                durationEasy = ivlEasy * dayConvertor
+            }
 
-            ivlHard = nextInterval(stateHard.stability)
-            ivlGood = nextInterval(stateGood.stability)
-            ivlEasy = nextInterval(stateEasy.stability)
+            else -> {
+                val interval = flashCard.interval
+                val lastD = flashCard.difficulty
+                val lastS = flashCard.stability
 
-            ivlHard = kotlin.math.min(ivlHard, ivlGood)
-            ivlGood = kotlin.math.min(ivlGood, ivlHard + 1)
-            ivlEasy = kotlin.math.min(ivlEasy, ivlGood + 1)
+                val retrievability = forgettingCurve(interval.toDouble(), lastS)
 
-            txtHard = "$ivlHard days"
-            txtGood = "$ivlGood days"
-            txtEasy = "$ivlEasy days"
+                stateAgain = InitState(
+                    difficulty = nextDifficulty(lastD, Rating.Again),
+                    stability = nextForgetStability(lastD, lastS, retrievability)
+                )
+                stateHard = InitState(
+                    difficulty = nextDifficulty(lastD, Rating.Hard),
+                    stability = nextRecallStability(lastD, lastS, retrievability, Rating.Hard)
+                )
+                stateGood = InitState(
+                    difficulty = nextDifficulty(lastD, Rating.Good),
+                    stability = nextRecallStability(lastD, lastS, retrievability, Rating.Good)
+                )
+                stateEasy = InitState(
+                    difficulty = nextDifficulty(lastD, Rating.Easy),
+                    stability = nextRecallStability(lastD, lastS, retrievability, Rating.Easy)
+                )
 
-            durationHard = ivlHard * dayConvertor
-            durationGood = ivlGood * dayConvertor
-            durationEasy = ivlEasy * dayConvertor
+                ivlHard = nextInterval(stateHard.stability)
+                ivlGood = nextInterval(stateGood.stability)
+                ivlEasy = nextInterval(stateEasy.stability)
+
+                ivlHard = kotlin.math.min(ivlHard, ivlGood)
+                ivlGood = kotlin.math.min(ivlGood, ivlHard + 1)
+                ivlEasy = kotlin.math.min(ivlEasy, ivlGood + 1)
+
+                txtHard = "$ivlHard days"
+                txtGood = "$ivlGood days"
+                txtEasy = "$ivlEasy days"
+
+                durationHard = ivlHard * dayConvertor
+                durationGood = ivlGood * dayConvertor
+                durationEasy = ivlEasy * dayConvertor
+            }
         }
 
         gradeList[0] = gradeList[0].copy(
@@ -161,8 +178,11 @@ class FSRS(
             durationMillis = durationHard, interval = ivlHard, txt = txtHard
         )
         gradeList[3] = gradeList[3].copy(
-            stability = stateAgain.stability, difficulty = stateAgain.difficulty,
-            durationMillis = 3 * 60 * 1000L, txt = "< 3 Min"
+            stability = stateAgain.stability,
+            difficulty = stateAgain.difficulty,
+            interval = flashCard.interval,
+            durationMillis = 3 * 60 * 1000L,
+            txt = "< 3 Min"
         )
 
         return gradeList
