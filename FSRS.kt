@@ -75,7 +75,7 @@ class FSRS(
             durationEasy = ivlEasy * dayConvertor
 
 
-        } else if (flashCard.interval == 0) {
+        } else if (flashCard.interval > 0 && flashCard.lastRating == Rating.Again.value) {
             val lastD = flashCard.difficulty
             val lastS = flashCard.stability
 
