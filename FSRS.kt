@@ -179,9 +179,9 @@ class FSRS(
     }
 
     private fun convertDays(days: Int): String {
-        if (days > 365) return "${days / 365.0} year"
-        else if (days > 30) return "${days / 30.0} month"
-        else return return "$days day"
+        return if (days > 365) "${days / 365.0} year"
+        else if (days > 30) "${days / 30.0} month"
+        else "$days day"
     }
 
     private fun applyFuzz(
@@ -295,4 +295,5 @@ class FSRS(
         return "%.2f".format(result).toDouble()
     }
 }
+
 
