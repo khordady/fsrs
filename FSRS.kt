@@ -72,52 +72,42 @@ class FSRS(
                 durationEasy = ivlEasy * dayConvertor
             }
 
-            CardPhase.Know.value -> {
-                stateAgain = initState(Rating.Again)
-                stateHard = initState(Rating.Hard)
-                stateGood = initState(Rating.Good)
-                stateEasy = initState(Rating.Easy)
+            CardPhase.ReLearning.value -> {
+                if (flashCard.difficulty == 0.0) {
+                    stateAgain = initState(Rating.Again)
+                    stateHard = initState(Rating.Hard)
+                    stateGood = initState(Rating.Good)
+                    stateEasy = initState(Rating.Easy)
+                }
+                else {
+                    val lastD = flashCard.difficulty
+                    val lastS = flashCard.stability
+
+                    stateAgain = InitState(
+                        difficulty = nextDifficulty(lastD, Rating.Again),
+                        stability = nextShortTermStability(lastS, Rating.Again)
+                    )
+                    stateHard = InitState(
+                        difficulty = nextDifficulty(lastD, Rating.Hard),
+                        stability = nextShortTermStability(lastS, Rating.Hard)
+                    )
+                    stateGood = InitState(
+                        difficulty = nextDifficulty(lastD, Rating.Good),
+                        stability = nextShortTermStability(lastS, Rating.Good)
+                    )
+                    stateEasy = InitState(
+                        difficulty = nextDifficulty(lastD, Rating.Easy),
+                        stability = nextShortTermStability(lastS, Rating.Easy)
+                    )
+                }
 
                 ivlGood = nextInterval(stateGood.stability)
                 ivlEasy = nextInterval(stateEasy.stability)
                 ivlEasy = max(ivlEasy, ivlGood + 1)
 
                 txtHard = "10 Min"
-                txtGood = "$ivlGood days"
-                txtEasy = "$ivlEasy days"
-
-                durationGood = ivlGood * dayConvertor
-                durationEasy = ivlEasy * dayConvertor
-            }
-
-            CardPhase.Learning.value -> {
-                val lastD = flashCard.difficulty
-                val lastS = flashCard.stability
-
-                stateAgain = InitState(
-                    difficulty = nextDifficulty(lastD, Rating.Again),
-                    stability = nextShortTermStability(lastS, Rating.Again)
-                )
-                stateHard = InitState(
-                    difficulty = nextDifficulty(lastD, Rating.Hard),
-                    stability = nextShortTermStability(lastS, Rating.Hard)
-                )
-                stateGood = InitState(
-                    difficulty = nextDifficulty(lastD, Rating.Good),
-                    stability = nextShortTermStability(lastS, Rating.Good)
-                )
-                stateEasy = InitState(
-                    difficulty = nextDifficulty(lastD, Rating.Easy),
-                    stability = nextShortTermStability(lastS, Rating.Easy)
-                )
-
-                ivlGood = nextInterval(stateGood.stability)
-                ivlEasy = nextInterval(stateEasy.stability)
-                ivlEasy = max(ivlEasy, ivlGood + 1)
-
-                txtHard = "< 10 min"
-                txtGood = "$ivlGood days"
-                txtEasy = "$ivlEasy days"
+                txtGood = convertDays(ivlGood)
+                txtEasy = convertDays(ivlEasy)
 
                 durationGood = ivlGood * dayConvertor
                 durationEasy = ivlEasy * dayConvertor
@@ -155,9 +145,9 @@ class FSRS(
                 ivlGood = kotlin.math.min(ivlGood, ivlHard + 1)
                 ivlEasy = kotlin.math.min(ivlEasy, ivlGood + 1)
 
-                txtHard = "$ivlHard days"
-                txtGood = "$ivlGood days"
-                txtEasy = "$ivlEasy days"
+                txtHard = convertDays(ivlHard)
+                txtGood = convertDays(ivlGood)
+                txtEasy = convertDays(ivlEasy)
 
                 durationHard = ivlHard * dayConvertor
                 durationGood = ivlGood * dayConvertor
@@ -186,6 +176,12 @@ class FSRS(
         )
 
         return gradeList
+    }
+
+    private fun convertDays(days: Int): String {
+        if (days > 365) return "${days / 365.0} year"
+        else if (days > 30) return "${days / 30.0} month"
+        else return return "$days day"
     }
 
     private fun applyFuzz(
@@ -299,3 +295,4 @@ class FSRS(
         return "%.2f".format(result).toDouble()
     }
 }
+
